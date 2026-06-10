@@ -1,0 +1,58 @@
+{
+  "name": "insomnia-plugin-plus4u-oidc-v2",
+  "version": "1.0.0",
+  "description": "Insomnia plugin for OIDC authentication against Plus4U and custom uuOIDC servers. Implements OAuth 2.1 Authorization Code + PKCE + state + nonce, encrypted local vault (scrypt + AES-256-GCM), and opt-in ROPC for uuEE.",
+  "license": "MIT",
+  "main": "dist/src/plugin.js",
+  "bin": {
+    "insomnia-plugin-plus4u-oidc-v2": "bin/cli.js",
+    "oidc-plus4u-vault-v2": "bin/cli.js"
+  },
+  "files": [
+    "dist/src/",
+    "bin/",
+    "README.md",
+    "CHANGELOG.md",
+    "THREAT_MODEL.md",
+    "VAULT_FORMAT.md",
+    "MIGRATION.md",
+    "PUBLISHING.md",
+    "LICENSE"
+  ],
+  "insomnia": {
+    "name": "plus4u-oidc-v2",
+    "displayName": "Plus4U OIDC (v2)",
+    "description": "Authenticate against oidc.plus4u.net and custom uuOIDC servers (PKCE)."
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "prepare": "npm run clean && npm run build",
+    "test": "npm run build && node --test --test-reporter spec \"dist/test/*.js\"",
+    "migrate-legacy-vault": "node bin/cli.js migrate-legacy-vault",
+    "vault:add": "node bin/cli.js vault add",
+    "vault:delete": "node bin/cli.js vault delete",
+    "vault:list": "node bin/cli.js vault list",
+    "uu-safe-install": "npx uu-safe-install"
+  },
+  "dependencies": {
+    "jws": "^4.0.0",
+    "open": "^8.4.2"
+  },
+  "devDependencies": {
+    "@types/jws": "^3.2.10",
+    "@types/node": "^20.11.0",
+    "typescript": "^5.4.0"
+  },
+  "keywords": [
+    "insomnia",
+    "insomnia-plugin",
+    "plus4u",
+    "oidc",
+    "pkce",
+    "oauth"
+  ]
+}
