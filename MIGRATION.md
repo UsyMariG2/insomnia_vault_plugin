@@ -31,8 +31,8 @@ On Windows, `~` in shell examples below means `%USERPROFILE%` in CMD or `$env:US
   option — see THREAT_MODEL.md §"Legacy crypto").
 - Network access to `registry.npmjs.org` (or your internal npm mirror) so
   Insomnia can install the plugin from the UI and you can install the vault
-  CLI globally (`npm install -g insomnia-plugin-plus4u-oidc-v2@rc` or
-  `npx uu-safe-install -g insomnia-plugin-plus4u-oidc-v2@rc` on Plus4U
+  CLI globally (`npm install -g insomnia-plugin-plus4u-oidc-v2` or
+  `npx uu-safe-install -g insomnia-plugin-plus4u-oidc-v2` on Plus4U
   workstations).
 
 ---
@@ -85,9 +85,8 @@ On Windows, `~` in shell examples below means `%USERPROFILE%` in CMD or `$env:US
 
 ## 3. Install the new plugin
 
-The plugin is published on npm as
-[`insomnia-plugin-plus4u-oidc-v2`](https://www.npmjs.com/package/insomnia-plugin-plus4u-oidc-v2)
-(current release: **`1.0.0-rc.3`** on the `rc` dist-tag).
+The plugin is publicly available on npm as
+[`insomnia-plugin-plus4u-oidc-v2`](https://www.npmjs.com/package/insomnia-plugin-plus4u-oidc-v2).
 
 In Insomnia:
 

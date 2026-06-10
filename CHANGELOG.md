@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-06-10
+
+### Added
+
+- Initial public release on the
+  [npm registry](https://www.npmjs.com/package/insomnia-plugin-plus4u-oidc-v2).
+  Install the Insomnia plugin from **Preferences → Plugins**, or the vault
+  CLI globally with `npm install -g insomnia-plugin-plus4u-oidc-v2`
+  (`npx uu-safe-install -g …` on Plus4U workstations).
+
+### Documentation
+
+- `README.md`, `MIGRATION.md`, `PUBLISHING.md`: end-user docs describe
+  public npm install only (Insomnia UI and global `oidc-plus4u-vault-v2`
+  CLI). Removed tarball, git-clone, symlink, `npm link`, and other
+  local-development install paths, plus unpublished / pre-release wording.
+
 ## [1.0.0-rc.3] - 2026-06-09
 
 ### Added

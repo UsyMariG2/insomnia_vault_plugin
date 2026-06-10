@@ -4,7 +4,7 @@ Insomnia plugin for OIDC authentication against `oidc.plus4u.net` and any custom
 
 If you are migrating from the legacy plugin, jump straight to  [Migration from](#migration-from-oidc-plus4u-vault) `oidc-plus4u-vault`.
 
-**npm:** [`insomnia-plugin-plus4u-oidc-v2`](https://www.npmjs.com/package/insomnia-plugin-plus4u-oidc-v2) — current release **`1.0.0-rc.3`** (published on the `rc` dist-tag; `@latest` may point at an older stable until a non-RC release ships).
+**npm:** [`insomnia-plugin-plus4u-oidc-v2`](https://www.npmjs.com/package/insomnia-plugin-plus4u-oidc-v2) — publicly available on the npm registry.
 
 ---
 
@@ -75,13 +75,13 @@ Install the vault CLI from npm. It puts `oidc-plus4u-vault-v2` on your `PATH` (a
 
 ### From npm
 
-The current release candidate is on npm as **`1.0.0-rc.3`**, published under the **`rc`** dist-tag. Append `@rc` to install the latest RC, or pin `@1.0.0-rc.3` explicitly.
+Install the latest published version from the public npm registry.
 
 
-| Audience          | Command                                                              |
-| ----------------- | -------------------------------------------------------------------- |
-| Unicorn coworkers | `npx uu-safe-install -g insomnia-plugin-plus4u-oidc-v2@rc`            |
-| Everyone else     | `npm install -g insomnia-plugin-plus4u-oidc-v2@rc`                   |
+| Audience          | Command                                                       |
+| ----------------- | ------------------------------------------------------------- |
+| Unicorn coworkers | `npx uu-safe-install -g insomnia-plugin-plus4u-oidc-v2`       |
+| Everyone else     | `npm install -g insomnia-plugin-plus4u-oidc-v2`               |
 
 
 If your user `.npmrc` pins a Plus4U mirror instead of the public registry, append the same flag to either command:
@@ -96,7 +96,7 @@ Verify: `oidc-plus4u-vault-v2 help` (or `oidc-plus4u-vault-v2 --version` if your
 
 ### From the Insomnia UI
 
-The plugin is published on npm as [`insomnia-plugin-plus4u-oidc-v2`](https://www.npmjs.com/package/insomnia-plugin-plus4u-oidc-v2) (current release: **`1.0.0-rc.3`** on the `rc` dist-tag).
+The plugin is publicly available on npm as [`insomnia-plugin-plus4u-oidc-v2`](https://www.npmjs.com/package/insomnia-plugin-plus4u-oidc-v2).
 
 1. `Application → Preferences → Plugins` (`Cmd+,` on macOS, `Ctrl+,` on Windows/Linux).
 2. Enter `insomnia-plugin-plus4u-oidc-v2` in the *Install Plugin* field and click **Install Plugin**.
@@ -130,7 +130,7 @@ node -e "const p=require(require('path').join(process.env.APPDATA,'Insomnia','pl
 Expected:
 `uuPersonPlus4uOidcToken, uuPersonCustomOidcToken, uuEePlus4uOidcToken`.
 
-In the Insomnia UI: `Preferences → Plugins` should list **Plus4U OIDC (v2)** with the installed npm version (currently **`1.0.0-rc.3`**) and three template tags registered.
+In the Insomnia UI: `Preferences → Plugins` should list **Plus4U OIDC (v2)** with the installed npm version and three template tags registered.
 
 ---
 

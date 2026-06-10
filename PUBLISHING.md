@@ -1,10 +1,9 @@
 # Publishing the plugin
 
-Internal runbook for maintainers. The package is published on the public
-npm registry as
-[`insomnia-plugin-plus4u-oidc-v2`](https://www.npmjs.com/package/insomnia-plugin-plus4u-oidc-v2)
-(current release line: **`1.0.0-rc.3`** on the `rc` dist-tag). This
-document covers pre-flight checks, tagging, publish, and smoke tests.
+Internal runbook for maintainers. The package is publicly available on
+the npm registry as
+[`insomnia-plugin-plus4u-oidc-v2`](https://www.npmjs.com/package/insomnia-plugin-plus4u-oidc-v2).
+This document covers pre-flight checks, tagging, publish, and smoke tests.
 
 Commands below are grouped by **macOS**, **Linux** (bash), and **Windows**
 (PowerShell) where paths or shell syntax differ. Registry operations
@@ -69,9 +68,9 @@ Run from your **clone** of this repository (adjust `cd` to your path).
 `npm test` runs `build` then the spec reporter over `dist/test/*.test.js`
 — all tests must pass.
 4. The plugin loads end-to-end in Insomnia: install
-   `insomnia-plugin-plus4u-oidc-v2` from **Preferences → Plugins** (or
-   `@rc` if you are smoke-testing a pre-release), enable elevated plugin
-   access, and confirm the four template tags appear in the auth dropdown.
+   `insomnia-plugin-plus4u-oidc-v2` from **Preferences → Plugins**,
+   enable elevated plugin access, and confirm the four template tags appear
+   in the auth dropdown.
 
 ---
 
@@ -169,12 +168,13 @@ Clear npm cache (any OS):
 npm cache clean --force
 ```
 
-**macOS / Linux (bash)** — same dist-tag as publish (example: `@rc`):
+**macOS / Linux (bash)** — use the same dist-tag as publish (e.g. `@latest`
+for a stable release):
 
 ```bash
 SMOKE="$(mktemp -d)"
 cd "$SMOKE" && npm init -y >/dev/null
-npm install insomnia-plugin-plus4u-oidc-v2@rc \
+npm install insomnia-plugin-plus4u-oidc-v2 \
   --registry https://registry.npmjs.org/
 node -e "console.log(require('insomnia-plugin-plus4u-oidc-v2').templateTags.map(t=>t.name))"
 cd - >/dev/null && rm -rf "$SMOKE"
@@ -187,7 +187,7 @@ $smoke = Join-Path $env:TEMP ("insomnia-smoke-" + [guid]::NewGuid().ToString())
 New-Item -ItemType Directory -Force -Path $smoke | Out-Null
 Set-Location $smoke
 npm init -y | Out-Null
-npm install insomnia-plugin-plus4u-oidc-v2@rc `
+npm install insomnia-plugin-plus4u-oidc-v2 `
   --registry https://registry.npmjs.org/
 node -e "console.log(require('insomnia-plugin-plus4u-oidc-v2').templateTags.map(t=>t.name))"
 Set-Location $env:TEMP
