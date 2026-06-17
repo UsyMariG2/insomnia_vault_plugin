@@ -5,6 +5,7 @@
  *   vault add    --user <id> [--uri <oidc>] [--vault <path>]
  *   vault delete --user <id> [--uri <oidc>] [--vault <path>]
  *   vault list                           [--vault <path>]
+ *   vault import --source <path> [-s]    [--vault <path>]
  *
  * `migrate-legacy-vault` reads a legacy `oidc-plus4u-vault` file, prompts
  * for its password and for the new vault password, and writes a fresh
@@ -24,6 +25,7 @@ import {
   DEFAULT_PLUS4U_OIDC_SERVER,
   runVaultAdd,
   runVaultDelete,
+  runVaultImport,
   runVaultList,
   type VaultCliDeps,
 } from "./vault";
@@ -47,7 +49,16 @@ function parseArgs(rawArgs: readonly string[]): ParsedArgs {
     if (token.startsWith("--")) {
       const key = token.slice(2);
       const next = rawArgs[i + 1];
-      if (next !== undefined && !next.startsWith("--")) {
+      if (next !== undefined && !next.startsWith("-")) {
+        options.set(key, next);
+        i += 1;
+      } else {
+        flags.add(key);
+      }
+    } else if (token.startsWith("-") && token.length === 2) {
+      const key = token.slice(1);
+      const next = rawArgs[i + 1];
+      if (next !== undefined && !next.startsWith("-")) {
         options.set(key, next);
         i += 1;
       } else {
@@ -74,6 +85,7 @@ function printHelp(): void {
       "  vault add              Interactively add (or overwrite) a vault entry. Tests the credentials against the OIDC server first.",
       "  vault delete           Remove a vault entry (by user; use --uri if several OIDC servers share the label).",
       "  vault list             Print one line per entry: `<user> - <oidc-server-url>`.",
+      "  vault import           Merge entries from another vault into the target vault.",
       "  help                   Show this help.",
       "",
       "migrate-legacy-vault options:",
@@ -94,6 +106,11 @@ function printHelp(): void {
       "vault list options:",
       `  --vault <path>         Vault file path. Default: ${defaultVaultPath()}`,
       "",
+      "vault import options:",
+      "  --source <path>        REQUIRED. Path to the vault to import from.",
+      "  -s <path>              Short form of --source.",
+      `  --vault <path>         Target vault file path. Default: ${defaultVaultPath()}`,
+      "",
     ].join("\n"),
   );
 }
@@ -101,7 +118,7 @@ function printHelp(): void {
 function printVaultHelp(): void {
   stdout.write(
     [
-      "Usage: oidc-plus4u-vault-v2 vault <add|delete|list> [options]",
+      "Usage: oidc-plus4u-vault-v2 vault <add|delete|list|import> [options]",
       "Run `oidc-plus4u-vault-v2 help` for the full option reference.",
       "",
     ].join("\n"),
@@ -210,8 +227,10 @@ async function runVaultGroup(
       return runVaultDelete(options, flags, defaultDeps);
     case "list":
       return runVaultList(options, defaultDeps);
+    case "import":
+      return runVaultImport(options, flags, defaultDeps);
     case undefined:
-      logError("`vault` requires a subcommand: add, delete, or list.");
+      logError("`vault` requires a subcommand: add, delete, list, or import.");
       printVaultHelp();
       return 1;
     default:

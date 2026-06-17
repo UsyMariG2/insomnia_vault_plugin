@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `vault import --source <path> [-s <path>] [--vault <path>]` — merge entries
+  from another new-format vault into the target vault (`src/cli/vault.ts`).
+  Creates the target vault with a new password when it does not exist yet
+  (same rules as `vault add`). Source entries overwrite collisions. The
+  source file is never modified.
+
 ## [1.0.0] - 2026-06-10
 
 ### Added
