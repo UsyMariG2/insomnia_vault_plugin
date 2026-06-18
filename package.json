@@ -1,6 +1,6 @@
 {
   "name": "insomnia-plugin-plus4u-oidc-v2",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Insomnia plugin for OIDC authentication against Plus4U and custom uuOIDC servers. Implements OAuth 2.1 Authorization Code + PKCE + state + nonce, encrypted local vault (scrypt + AES-256-GCM), and opt-in ROPC for uuEE.",
   "license": "MIT",
   "main": "dist/src/plugin.js",
