@@ -260,9 +260,13 @@ oidc-plus4u-vault-v2 vault delete --user my-bot \
 
 # List every entry as `<user> - <oidc-server-url>`.
 oidc-plus4u-vault-v2 vault list
+
+# Import entries from another vault into the target (default ~/.plus4u-oidc-v2/vault.data).
+oidc-plus4u-vault-v2 vault import --source /path/to/other/vault.data
+oidc-plus4u-vault-v2 vault import -s /path/to/other/vault.data --vault /path/to/target/vault.data
 ```
 
-The first `vault add` against a non-existent vault file will prompt for a new vault password (twice; minimum 12 characters) before storing the entry, so you can start fresh without first running `migrate-legacy-vault`. Subsequent commands prompt once for the existing vault password.
+The first `vault add` against a non-existent vault file will prompt for a new vault password (twice; minimum 12 characters) before storing the entry, so you can start fresh without first running `migrate-legacy-vault`. `vault import` does the same when the target vault does not exist yet. Subsequent commands prompt once for the existing vault password.
 
 The vault is also populated automatically by `uuEePlus4uOidcToken` — which prompts you for new access codes on first sight of a new identification, caches them in session memory, and re-uses them across requests with the same label — and by the `migrate-legacy-vault` tool.
 

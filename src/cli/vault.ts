@@ -1,5 +1,5 @@
 /**
- * Vault CLI subcommands: `add`, `delete`, `list`.
+ * Vault CLI subcommands: `add`, `delete`, `list`, `import`.
  *
  * Wired by [src/migrate/cli.ts](../migrate/cli.ts), which dispatches on the
  * second positional token (`cli vault add`, `cli vault delete`, `cli vault
@@ -30,6 +30,8 @@ import {
   removeEntry,
   resolveVaultPath,
   vaultExists,
+  writeVault,
+  type VaultContents,
   type VaultEntry,
 } from "../vault/store";
 
@@ -217,6 +219,81 @@ export async function runVaultList(
     const oidc = entryOidcFromKey(id, entry.oidcServer);
     deps.stdout.write(`${label} - ${oidc}\n`);
   }
+  return 0;
+}
+
+export async function runVaultImport(
+  options: Map<string, string>,
+  _flags: Set<string>,
+  deps: VaultCliDeps,
+): Promise<number> {
+  const sourcePath = (options.get("source") ?? options.get("s") ?? "").trim();
+  if (!sourcePath) {
+    deps.log.error("`vault import` requires --source <path> (or -s <path>).");
+    return 2;
+  }
+
+  const targetPath = resolveVaultPath(options.get("vault"));
+  if (sourcePath === targetPath) {
+    deps.log.error("Source and target vault paths must be different.");
+    return 2;
+  }
+
+  if (!(await vaultExists(sourcePath))) {
+    deps.log.error(`Source vault file not found at ${sourcePath}.`);
+    return 3;
+  }
+
+  const sourcePassword = await deps.promptPassword("Source vault password: ");
+  let sourceVault: VaultContents;
+  try {
+    sourceVault = await readVault(sourcePassword, { filePath: sourcePath });
+  } catch (err) {
+    deps.log.error(`Could not read source vault: ${(err as Error).message}`);
+    return 3;
+  }
+
+  const importCount = Object.keys(sourceVault.entries).length;
+
+  let targetPassword: string;
+  let merged: VaultContents = { entries: {} };
+
+  if (!(await vaultExists(targetPath))) {
+    deps.log.info(`No vault file at ${targetPath}; creating a new one.`);
+    const pw1 = await deps.promptPassword("New vault password: ");
+    const pw2 = await deps.promptPassword("Retype new vault password: ");
+    if (pw1 !== pw2) {
+      deps.log.error("Passwords do not match.");
+      return 5;
+    }
+    if (pw1.length < NEW_VAULT_PASSWORD_MIN_LENGTH) {
+      deps.log.error(`New vault password must be at least ${NEW_VAULT_PASSWORD_MIN_LENGTH} characters long.`);
+      return 6;
+    }
+    targetPassword = pw1;
+  } else {
+    targetPassword = await deps.promptPassword("Vault password: ");
+    try {
+      merged = await readVault(targetPassword, { filePath: targetPath });
+    } catch (err) {
+      deps.log.error(`Could not read target vault: ${(err as Error).message}`);
+      return 4;
+    }
+  }
+
+  for (const [key, entry] of Object.entries(sourceVault.entries)) {
+    merged.entries[key] = entry;
+  }
+
+  try {
+    await writeVault(merged, targetPassword, { filePath: targetPath });
+  } catch (err) {
+    deps.log.error(`Could not write target vault: ${(err as Error).message}`);
+    return 4;
+  }
+
+  deps.log.info(`Imported ${importCount} entries into vault ${targetPath}.`);
+  deps.log.info(`The source vault at ${sourcePath} was NOT modified.`);
   return 0;
 }
 

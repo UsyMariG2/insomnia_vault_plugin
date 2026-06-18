@@ -1,0 +1,49 @@
+---
+description: Po změně implementace zkontrolovat a aktualizovat dokumentaci a CHANGELOG.md
+globs: src/**
+alwaysApply: false
+---
+
+# Dokumentace a CHANGELOG při změnách implementace
+
+Při každé **uživatelsky viditelné** změně chování (tagy, CLI, auth flow, vault, migrace, konfigurace) dokonči úkol až po kontrole dokumentace. Interní refaktoring bez změny chování dokumentaci nevyžaduje.
+
+## Mapa dokumentace
+
+| Soubor | Kdy aktualizovat |
+|--------|------------------|
+| `CHANGELOG.md` | Každá pozoruhodná změna pro uživatele (viz níže) |
+| `README.md` | Instalace, tagy, CLI příkazy, konfigurační pole, příklady, požadavky |
+| `MIGRATION.md` | Migrace z legacy pluginu/CLI, cesty, breaking changes |
+| `VAULT_FORMAT.md` | Formát vaultu, klíče, šifrování, composite keys |
+| `THREAT_MODEL.md` | Bezpečnostní model, hrozby, mitigace |
+| `PUBLISHING.md` | Release proces, verzování, publikace na npm |
+
+## CHANGELOG.md
+
+- Formát: [Keep a Changelog](https://keepachangelog.com/) — sekce `## [Unreleased]` nahoře.
+- Kategorie: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`.
+- Popisuj **co se změnilo pro uživatele** a proč; u větších změn uveď relevantní moduly (`src/tags/…`, `src/vault/…`).
+- Novou verzi a datum přidej až při release (ne při běžném vývoji).
+
+## Kontrolní checklist (před dokončením úkolu)
+
+1. Projdi změněné soubory v `src/` a `bin/` — mění se veřejné API, chování tagů, CLI nebo formát dat?
+2. Pokud ano: projdi tabulku dokumentace výše a aktualizuj všechny dotčené soubory ve stejném PR/commitu.
+3. Přidej položku do `CHANGELOG.md` → `## [Unreleased]` (správná kategorie).
+4. U nových konfiguračních polí tagů aktualizuj tabulky v `README.md` i popis v kódu tagu.
+5. U breaking changes: `MIGRATION.md` + `Changed`/`Removed` v CHANGELOG + poznámka v README.
+
+## Co dokumentaci nevyžaduje
+
+- Čistý refaktoring bez změny chování
+- Pouze testy pokrývající existující chování
+- Změny v `dist/` (generované — upravuj `src/`)
+
+## Příklad
+
+Změna: nové pole **Token scope** u tagu `uuPersonPlus4uOidcToken`.
+
+- `CHANGELOG.md` → `### Added` pod `[Unreleased]`
+- `README.md` → tabulka tagů / sekce konfigurace
+- `MIGRATION.md` — jen pokud ovlivňuje migraci z legacy

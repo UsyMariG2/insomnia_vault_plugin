@@ -36,6 +36,7 @@
     "vault:add": "node bin/cli.js vault add",
     "vault:delete": "node bin/cli.js vault delete",
     "vault:list": "node bin/cli.js vault list",
+    "vault:import": "node bin/cli.js vault import",
     "uu-safe-install": "npx uu-safe-install"
   },
   "dependencies": {

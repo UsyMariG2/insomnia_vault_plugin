@@ -12,9 +12,9 @@ import assert from "node:assert/strict";
 import { mkdtempSync, statSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runVaultAdd, runVaultDelete, runVaultList, type VaultCliDeps } from "../src/cli/vault";
+import { runVaultAdd, runVaultDelete, runVaultImport, runVaultList, type VaultCliDeps } from "../src/cli/vault";
 import { entryStorageKey } from "../src/vault/keys";
-import { addEntry, readVault } from "../src/vault/store";
+import { addEntry, readVault, writeVault } from "../src/vault/store";
 
 interface StubDeps extends VaultCliDeps {
   promptCalls: string[];
@@ -265,5 +265,132 @@ test("vault list: prints '<id> - <url>' sorted, one per line", async () => {
     );
   } finally {
     cleanup();
+  }
+});
+
+test("vault import: merges source entries into a new target vault", async () => {
+  const source = tempVaultPath();
+  const target = tempVaultPath();
+  const sourcePw = "source-vault-pw-1234";
+  const targetPw = "target-vault-pw-1234";
+  const oidcA = "https://oidc.example.com/a";
+  const oidcB = "https://oidc.example.com/b";
+  try {
+    await addEntry("alice", { accessCode1: "A1", accessCode2: "A2", oidcServer: oidcA }, sourcePw, { filePath: source.filePath });
+    await addEntry("bob", { accessCode1: "B1", accessCode2: "B2", oidcServer: oidcB }, sourcePw, { filePath: source.filePath });
+    const sourceBefore = await readVault(sourcePw, { filePath: source.filePath });
+    const deps = makeDeps({ passwords: [sourcePw, targetPw, targetPw] });
+    const code = await runVaultImport(
+      new Map([["source", source.filePath], ["vault", target.filePath]]),
+      new Set(),
+      deps,
+    );
+    assert.equal(code, 0);
+    const imported = await readVault(targetPw, { filePath: target.filePath });
+    assert.deepEqual(Object.keys(imported.entries).sort(), [
+      entryStorageKey("alice", oidcA),
+      entryStorageKey("bob", oidcB),
+    ]);
+    assert.equal(imported.entries[entryStorageKey("alice", oidcA)]?.accessCode1, "A1");
+    assert.deepEqual(await readVault(sourcePw, { filePath: source.filePath }), sourceBefore);
+    assert.match(deps.infoBuf.join("\n"), /NOT modified/);
+  } finally {
+    source.cleanup();
+    target.cleanup();
+  }
+});
+
+test("vault import: merges into an existing target and source overwrites collisions", async () => {
+  const source = tempVaultPath();
+  const target = tempVaultPath();
+  const sourcePw = "source-vault-pw-1234";
+  const targetPw = "target-vault-pw-1234";
+  const oidcShared = "https://oidc.example.com/shared";
+  const oidcOther = "https://oidc.example.com/other";
+  try {
+    await addEntry("alice", { accessCode1: "SRC-A1", accessCode2: "SRC-A2", oidcServer: oidcShared }, sourcePw, { filePath: source.filePath });
+    await addEntry("carol", { accessCode1: "SRC-C1", accessCode2: "SRC-C2", oidcServer: oidcOther }, sourcePw, { filePath: source.filePath });
+    await addEntry("bob", { accessCode1: "TGT-B1", accessCode2: "TGT-B2", oidcServer: "https://oidc.example.com/bob-only" }, targetPw, { filePath: target.filePath });
+    await addEntry("alice", { accessCode1: "TGT-A1", accessCode2: "TGT-A2", oidcServer: oidcShared }, targetPw, { filePath: target.filePath });
+    const deps = makeDeps({ passwords: [sourcePw, targetPw] });
+    const code = await runVaultImport(
+      new Map([["source", source.filePath], ["vault", target.filePath]]),
+      new Set(),
+      deps,
+    );
+    assert.equal(code, 0);
+    const merged = await readVault(targetPw, { filePath: target.filePath });
+    assert.equal(merged.entries[entryStorageKey("alice", oidcShared)]?.accessCode1, "SRC-A1");
+    assert.equal(merged.entries[entryStorageKey("bob", "https://oidc.example.com/bob-only")]?.accessCode1, "TGT-B1");
+    assert.equal(merged.entries[entryStorageKey("carol", oidcOther)]?.accessCode1, "SRC-C1");
+  } finally {
+    source.cleanup();
+    target.cleanup();
+  }
+});
+
+test("vault import: rejects missing --source without prompting", async () => {
+  const target = tempVaultPath();
+  try {
+    const deps = makeDeps();
+    const code = await runVaultImport(new Map([["vault", target.filePath]]), new Set(), deps);
+    assert.equal(code, 2);
+    assert.equal(deps.promptPasswordCalls.length, 0);
+    assert.equal(existsSync(target.filePath), false);
+  } finally {
+    target.cleanup();
+  }
+});
+
+test("vault import: rejects when source and target paths are the same", async () => {
+  const { filePath, cleanup } = tempVaultPath();
+  const vaultPw = "existing-vault-pw-1234";
+  try {
+    await addEntry("solo", { accessCode1: "1", accessCode2: "2", oidcServer: "https://oidc.example.com/solo" }, vaultPw, { filePath });
+    const deps = makeDeps();
+    const code = await runVaultImport(
+      new Map([["source", filePath], ["vault", filePath]]),
+      new Set(),
+      deps,
+    );
+    assert.equal(code, 2);
+    assert.equal(deps.promptPasswordCalls.length, 0);
+  } finally {
+    cleanup();
+  }
+});
+
+test("vault import: accepts -s as short form of --source", async () => {
+  const source = tempVaultPath();
+  const target = tempVaultPath();
+  const sourcePw = "source-vault-pw-1234";
+  const targetPw = "target-vault-pw-1234";
+  const oidc = "https://oidc.example.com/short";
+  try {
+    await writeVault(
+      {
+        entries: {
+          [entryStorageKey("short-user", oidc)]: {
+            accessCode1: "S1",
+            accessCode2: "S2",
+            oidcServer: oidc,
+          },
+        },
+      },
+      sourcePw,
+      { filePath: source.filePath },
+    );
+    const deps = makeDeps({ passwords: [sourcePw, targetPw, targetPw] });
+    const code = await runVaultImport(
+      new Map([["s", source.filePath], ["vault", target.filePath]]),
+      new Set(),
+      deps,
+    );
+    assert.equal(code, 0);
+    const imported = await readVault(targetPw, { filePath: target.filePath });
+    assert.equal(imported.entries[entryStorageKey("short-user", oidc)]?.accessCode1, "S1");
+  } finally {
+    source.cleanup();
+    target.cleanup();
   }
 });
