@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- `uuEePlus4uOidcToken` resolves the file-vault password and access codes from
+  Insomnia's render context instead of OS environment variables (which
+  GUI-launched Insomnia never inherits). Order per value: Insomnia **Secret**
+  variable (`vault.*`, encrypted) → interactive prompt (pre-v13) → plain
+  Insomnia environment variable (last resort). Variable names are unchanged
+  (`PLUS4U_OIDC_V2_VAULT_PASSWORD`, `PLUS4U_OIDC_V2_ACCESS_CODE_1` / `_2`,
+  per-identification `PLUS4U_OIDC_V2_<IDENT>_AC1` / `_AC2`). On failure the tag
+  embeds a non-secret `(diag: …)` suffix and logs safe diagnostics to the
+  Insomnia main-process log (`main.log`). (`src/util/insomnia-prompt.ts`,
+  `src/tags/uu-ee-token.ts`)
+
 ## [1.0.0] - 2026-06-10
 
 ### Added

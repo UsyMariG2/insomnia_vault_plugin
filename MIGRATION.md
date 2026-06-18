@@ -258,19 +258,3 @@ File the issue with the steps to reproduce, the redacted DevTools log
 ```bash
 oidc-plus4u-vault-v2 help
 ```
-
----
-
-## 8. Bulk migration notes
-
-For a fleet (≥ 10 workstations), wrap the CLI in a non-interactive script
-**only if** you can supply the legacy and new passwords via a secure
-channel (e.g., an MDM-pushed environment variable). The current CLI is
-interactive by design; non-interactive support is tracked as a future
-enhancement. Until then, prefer running the migration in a guided session
-with the user.
-
-Do **not** check the legacy vault file into version control to "share" it
-across a team. The legacy KDF (HMAC-SHA256 with no salt and no
-stretching) makes offline brute force trivial; once shared, treat the
-passwords as compromised.

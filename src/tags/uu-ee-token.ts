@@ -24,7 +24,19 @@ import {
 import { scheduleInteractiveAuth } from "../util/auth-debounce";
 import { lookup, storeErr, storeOk } from "../util/token-cache";
 import { format, formatIsoDate } from "../util/messages";
-import { error as logError } from "../util/log";
+import { debug, info, error as logError } from "../util/log";
+import {
+  AccessCodesRequiredError,
+  ENV_ACCESS_CODE_1,
+  ENV_ACCESS_CODE_2,
+  ENV_VAULT_PASSWORD,
+  VaultPasswordRequiredError,
+  accessCodeEnvKeys,
+  getRenderPurpose,
+  promptSecret,
+  resolveFromInsomnia,
+  scopeKeyNames,
+} from "../util/insomnia-prompt";
 import type { InsomniaContext, TemplateTag } from "./types";
 
 interface CachedCreds {
@@ -46,18 +58,28 @@ const DEFAULT_OIDC_SERVER = "https://uuidentity.plus4u.net/uu-oidc-maing02/bb977
 const DEFAULT_SCOPE = "openid";
 
 async function loadVaultContents(context: InsomniaContext): Promise<VaultContents | null> {
-  if (!(await vaultExists(defaultVaultPath()))) {
+  const filePath = defaultVaultPath();
+  const exists = await vaultExists(filePath);
+  debug("loadVaultContents", { filePath, vaultFileExists: exists });
+  if (!exists) {
     return null;
   }
   if (vaultContentsCache) {
+    debug("loadVaultContents: using cached vault contents");
     return vaultContentsCache;
   }
   if (!vaultPassword) {
-    const pw = await context.app.prompt("OIDC vault password", {
-      label: "Encrypted vault password",
-      inputType: "password",
-    });
-    if (!pw) return null;
+    const source = resolveFromInsomnia(context, ENV_VAULT_PASSWORD).source;
+    info("Resolving vault password", { [ENV_VAULT_PASSWORD]: source });
+    const pw = await promptSecret(
+      context,
+      "OIDC vault password",
+      { label: "Encrypted vault password", inputType: "password" },
+      [ENV_VAULT_PASSWORD],
+    );
+    if (!pw) {
+      throw new VaultPasswordRequiredError(diagSuffix(context, [ENV_VAULT_PASSWORD]));
+    }
     vaultPassword = pw;
   }
   try {
@@ -97,30 +119,56 @@ async function gatherCreds(
 ): Promise<CachedCreds> {
   const sessionKey = entryStorageKey(identification, oidcServerOverride);
   const sessionHit = sessionCreds.get(sessionKey);
-  if (sessionHit) return sessionHit;
+  if (sessionHit) {
+    debug("gatherCreds: using session-cached credentials");
+    return sessionHit;
+  }
 
   if (preferVault) {
     const fromVault = await loadCredsFromVault(identification, oidcServerOverride, context);
     if (fromVault) {
+      debug("gatherCreds: credentials loaded from plugin file vault");
       sessionCreds.set(sessionKey, fromVault);
       return fromVault;
     }
   }
 
-  const ac1 = await context.app.prompt(`Access code 1 (${identification})`, {
-    label: `Access Code 1 for ${identification}`,
-    inputType: "password",
+  const ac1Keys = accessCodeEnvKeys(identification, 1);
+  const ac2Keys = accessCodeEnvKeys(identification, 2);
+  info("Resolving access codes", {
+    ac1: resolveFromInsomnia(context, ac1Keys[0]!).source,
+    ac2: resolveFromInsomnia(context, ac2Keys[0]!).source,
   });
-  const ac2 = await context.app.prompt(`Access code 2 (${identification})`, {
-    label: `Access Code 2 for ${identification}`,
-    inputType: "password",
-  });
+  const ac1 = await promptSecret(
+    context,
+    `Access code 1 (${identification})`,
+    { label: `Access Code 1 for ${identification}`, inputType: "password" },
+    ac1Keys,
+  );
+  const ac2 = await promptSecret(
+    context,
+    `Access code 2 (${identification})`,
+    { label: `Access Code 2 for ${identification}`, inputType: "password" },
+    ac2Keys,
+  );
   if (!ac1 || !ac2) {
-    throw new Error("Both access codes are required.");
+    throw new AccessCodesRequiredError(
+      identification,
+      diagSuffix(context, [...ac1Keys, ...ac2Keys, ENV_ACCESS_CODE_1, ENV_ACCESS_CODE_2]),
+    );
   }
   const creds: CachedCreds = { accessCode1: ac1, accessCode2: ac2, oidcServer: oidcServerOverride };
   sessionCreds.set(sessionKey, creds);
   return creds;
+}
+
+/** Build a non-secret diagnostic suffix for inline error messages. */
+function diagSuffix(context: InsomniaContext, keys: string[]): string {
+  const renderPurpose = getRenderPurpose(context) ?? "unknown";
+  const uniqueKeys = [...new Set(keys)];
+  const sources = uniqueKeys.map((key) => `${key}=${resolveFromInsomnia(context, key).source}`).join(", ");
+  const names = scopeKeyNames(context);
+  return `(diag: renderPurpose=${renderPurpose}; ${sources}; vault keys seen: [${names.vault.join(", ")}])`;
 }
 
 async function run(context: InsomniaContext, ...args: unknown[]): Promise<string> {
@@ -157,8 +205,22 @@ async function run(context: InsomniaContext, ...args: unknown[]): Promise<string
     );
   }
 
+  const renderPurpose = getRenderPurpose(context);
+  if (renderPurpose && renderPurpose !== "send") {
+    return format("token-in-progress", "Credentials are collected when you send the request.");
+  }
+
   const workspaceId = context.meta?.workspaceId ?? "default";
   const cacheKey = `uuEePlus4uOidcToken:${identification}:${oidcServer}:${scope}:${workspaceId}`;
+  const scopeNames = scopeKeyNames(context);
+  info("uuEePlus4uOidcToken run", {
+    identification,
+    oidcServer,
+    useVault,
+    renderPurpose: renderPurpose ?? "unknown",
+    topKeys: scopeNames.top,
+    vaultKeys: scopeNames.vault,
+  });
 
   const hit = lookup(cacheKey);
   if (hit.kind === "ok-fresh" && hit.token) return hit.token;
@@ -188,6 +250,12 @@ async function run(context: InsomniaContext, ...args: unknown[]): Promise<string
       },
     );
   } catch (err) {
+    if (err instanceof VaultPasswordRequiredError) {
+      return format("vault-locked", err.message);
+    }
+    if (err instanceof AccessCodesRequiredError) {
+      return format("missing-config", err.message);
+    }
     const message = (err as Error).message;
     logError(`uuEePlus4uOidcToken failed: ${message}`);
     storeErr(cacheKey, message);
@@ -238,4 +306,9 @@ export const uuEePlus4uOidcToken: TemplateTag = {
     },
   ],
   run,
+};
+
+export const __testReset = (): void => {
+  sessionCreds.clear();
+  clearVaultSession();
 };
