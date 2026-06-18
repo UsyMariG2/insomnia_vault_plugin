@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   embeds a non-secret `(diag: …)` suffix and logs safe diagnostics to the
   Insomnia main-process log (`main.log`). (`src/util/insomnia-prompt.ts`,
   `src/tags/uu-ee-token.ts`)
+### Added
+
+- `vault import --source <path> [-s <path>] [--vault <path>]` — merge entries
+  from another new-format vault into the target vault (`src/cli/vault.ts`).
+  Creates the target vault with a new password when it does not exist yet
+  (same rules as `vault add`). Source entries overwrite collisions. The
+  source file is never modified.
 
 ## [1.0.0] - 2026-06-10
 
