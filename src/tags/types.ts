@@ -20,11 +20,16 @@ export interface InsomniaContextMeta {
   requestId?: string;
 }
 
+export type RenderPurpose = "general" | "send" | "no-render";
+
 export interface InsomniaContext {
   app: InsomniaContextApp;
   meta?: InsomniaContextMeta;
+  renderPurpose?: RenderPurpose;
   context?: {
     getPurpose?(): string;
+    vault?: Record<string, unknown>;
+    [key: string]: unknown;
   };
 }
 

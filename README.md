@@ -4,7 +4,7 @@ Insomnia plugin for OIDC authentication against `oidc.plus4u.net` and any custom
 
 If you are migrating from the legacy plugin, jump straight to  [Migration from](#migration-from-oidc-plus4u-vault) `oidc-plus4u-vault`.
 
-**npm:** [`insomnia-plugin-plus4u-oidc-v2`](https://www.npmjs.com/package/insomnia-plugin-plus4u-oidc-v2) — publicly available on the npm registry.
+**npm:** `[insomnia-plugin-plus4u-oidc-v2](https://www.npmjs.com/package/insomnia-plugin-plus4u-oidc-v2)` — publicly available on the npm registry.
 
 ---
 
@@ -17,12 +17,9 @@ If you are migrating from the legacy plugin, jump straight to  [Migration from](
 | Node.js   | 18 or newer for the standalone CLI (Insomnia bundles a compatible Node for plugins) |
 | OS        | macOS 12+, Windows 10+, Linux with `xdg-open` for the browser launch                |
 
-
 ### Platform paths
 
-Insomnia plugin folders and vault files differ by OS (full table in
-`[MIGRATION.md](MIGRATION.md#platform-paths-quick-reference)`):
-
+Insomnia plugin folders and vault files differ by OS:
 
 | Resource           | macOS                                            | Linux                        | Windows                                       |
 | ------------------ | ------------------------------------------------ | ---------------------------- | --------------------------------------------- |
@@ -30,24 +27,19 @@ Insomnia plugin folders and vault files differ by OS (full table in
 | Vault (v2 default) | `~/.plus4u-oidc-v2/vault.data`                   | same as macOS                | `%USERPROFILE%\.plus4u-oidc-v2\vault.data`    |
 | Legacy vault       | `~/.oidc-plus4u-vault/vault.data`                | same as macOS                | `%USERPROFILE%\.oidc-plus4u-vault\vault.data` |
 
-
 On Windows, `~` in bash examples means `%USERPROFILE%` in CMD or `$env:USERPROFILE` in PowerShell.
 
 ---
 
 ## Prerequisite: enable "Allow elevated access for plugins"
-
-> **Insomnia 11+ requires a one-time setting change**, otherwise template tags from any external plugin (including this one) render as `unknown block tag: uuPersonPlus4uOidcToken` (and the same for the two other tags). This is an Insomnia security setting, not a plugin bug — see Kong/insomnia [#8917](https://github.com/Kong/insomnia/issues/8917), [#8708](https://github.com/Kong/insomnia/issues/8708), [#9211](https://github.com/Kong/insomnia/issues/9211).
+For v13+ see [Insomnia 13+ credentials via Insomnia variables](#insomnia-13-credentials-via-insomnia-variables-)
+> **Requires a one-time setting change**, otherwise template tags from any external plugin (including this one) render as `unknown block tag: uuPersonPlus4uOidcToken` (and the same for the two other tags). This is an Insomnia security setting, not a plugin bug — see Kong/insomnia [#8917](https://github.com/Kong/insomnia/issues/8917), [#8708](https://github.com/Kong/insomnia/issues/8708), [#9211](https://github.com/Kong/insomnia/issues/9211).
 
 How to enable it:
 
 1. In Insomnia, open `Application → Preferences` (`Cmd+,` on macOS, `Ctrl+,` on Windows/Linux) and select the `Plugins` tab.
 2. Toggle ON `**Allow elevated access for plugins`**.
 3. Fully quit Insomnia (`Cmd+Q` on macOS, close all windows on Windows/Linux) and reopen it.
-4. Optional sanity check — confirm the setting was persisted:
-   **macOS (bash):**
-   **Linux (bash):**
-   **Windows (PowerShell):**
 
 Why this plugin needs it: the auth flow runs a `127.0.0.1`-bound `http` callback server, derives keys with `node:crypto` (PKCE, scrypt, AES-256-GCM), reads/writes the encrypted vault with `node:fs`, and launches the system browser via the `open` package (system default handler; on Linux typically `xdg-open`). Insomnia gates all of those Node APIs behind elevated access. With the toggle off, Insomnia still loads the plugin module (`renderer.log` shows `[plugin] Loading plus4u-oidc-v2`), but never forwards its template tags to the templating Web Worker that does the actual rendering.
 
@@ -57,13 +49,11 @@ Why this plugin needs it: the auth flow runs a `127.0.0.1`-bound `http` callback
 
 The plugin registers three Insomnia template tags:
 
-
 | Tag                       | Purpose                                                                                              | Auth method                         |
 | ------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------- |
 | `uuPersonPlus4uOidcToken` | Log in as a real user against the Plus4U **production** or **development** OIDC server.              | Browser-based, **PKCE**             |
 | `uuPersonCustomOidcToken` | Log in as a real user against a user-configured uuOIDC server (gateway, internal, self-signed cert). | Browser-based, **PKCE** (no secret) |
 | `uuEePlus4uOidcToken`     | Service-account (uuEE) login. Opt-in only; vault-backed access codes supported.                      | ROPC (legacy password grant)        |
-
 
 All three return a raw `id_token` string when successful, or a clearly formatted `-- plus4u-oidc-v2 <status>: <detail> --` message when not. Drop the tag into any header, body, or environment variable.
 
@@ -71,22 +61,16 @@ All three return a raw `id_token` string when successful, or a clearly formatted
 
 ## Install the CLI globally for vault management
 
-Install the vault CLI from npm. It puts `oidc-plus4u-vault-v2` on your `PATH` (alias `insomnia-plugin-plus4u-oidc-v2`). On Plus4U workstations use `npx uu-safe-install` instead of bare `npm install` — it accepts the same flags, including `-g`.
+Install the vault CLI from npm. It puts `oidc-plus4u-vault-v2` on your `PATH` (alias `insomnia-plugin-plus4u-oidc-v2`).
 
 ### From npm
 
 Install the latest published version from the public npm registry.
 
-
-| Audience          | Command                                                       |
-| ----------------- | ------------------------------------------------------------- |
-| Unicorn coworkers | `npx uu-safe-install -g insomnia-plugin-plus4u-oidc-v2`       |
-| Everyone else     | `npm install -g insomnia-plugin-plus4u-oidc-v2`               |
-
-
-If your user `.npmrc` pins a Plus4U mirror instead of the public registry, append the same flag to either command:
-
-`--registry https://registry.npmjs.org/`
+| Audience          | Command                                                 |
+| ----------------- | ------------------------------------------------------- |
+| Unicorn coworkers | `npx uu-safe-install -g insomnia-plugin-plus4u-oidc-v2` |
+| Everyone else     | `npm install -g insomnia-plugin-plus4u-oidc-v2`         |
 
 Verify: `oidc-plus4u-vault-v2 help` (or `oidc-plus4u-vault-v2 --version` if your shell resolves the global bin).
 
@@ -96,39 +80,12 @@ Verify: `oidc-plus4u-vault-v2 help` (or `oidc-plus4u-vault-v2 --version` if your
 
 ### From the Insomnia UI
 
-The plugin is publicly available on npm as [`insomnia-plugin-plus4u-oidc-v2`](https://www.npmjs.com/package/insomnia-plugin-plus4u-oidc-v2).
+The plugin is publicly available on npm as [insomnia-plugin-plus4u-oidc-v2](https://www.npmjs.com/package/insomnia-plugin-plus4u-oidc-v2).
 
 1. `Application → Preferences → Plugins` (`Cmd+,` on macOS, `Ctrl+,` on Windows/Linux).
 2. Enter `insomnia-plugin-plus4u-oidc-v2` in the *Install Plugin* field and click **Install Plugin**.
 3. Insomnia loads the plugin from npm automatically.
 4. Restart Insomnia and confirm `[Allow elevated access for plugins](#prerequisite-enable-allow-elevated-access-for-plugins)` is ON.
-
-> **Plus4U `.npmrc` gotcha:** if your user `.npmrc` (`~/.npmrc` on macOS/Linux, `%USERPROFILE%\.npmrc` on Windows) pins a private registry (for example `https://repo.plus4u.net/repository/npm-dev/`), Insomnia's bundled Yarn hits that mirror first and the in-app install fails with `Yarn error {"type":"error","data":"Received invalid response from npm."}`. Fix it before step 2 — either remove the private `registry=` line or temporarily set `registry=https://registry.npmjs.org/`, install the plugin, then restore your usual config.
-
-### Verifying the install loaded correctly
-
-Without launching Insomnia, require the plugin entry point from Node:
-
-**macOS (bash):**
-
-```bash
-node -e "const p=require(process.env.HOME+'/Library/Application Support/Insomnia/plugins/insomnia-plugin-plus4u-oidc-v2'); console.log(p.templateTags.map(t=>t.name).join(', '))"
-```
-
-**Linux (bash):**
-
-```bash
-node -e "const p=require(process.env.HOME+'/.config/Insomnia/plugins/insomnia-plugin-plus4u-oidc-v2'); console.log(p.templateTags.map(t=>t.name).join(', '))"
-```
-
-**Windows (PowerShell):**
-
-```powershell
-node -e "const p=require(require('path').join(process.env.APPDATA,'Insomnia','plugins','insomnia-plugin-plus4u-oidc-v2')); console.log(p.templateTags.map(t=>t.name).join(', '))"
-```
-
-Expected:
-`uuPersonPlus4uOidcToken, uuPersonCustomOidcToken, uuEePlus4uOidcToken`.
 
 In the Insomnia UI: `Preferences → Plugins` should list **Plus4U OIDC (v2)** with the installed npm version and three template tags registered.
 
@@ -154,16 +111,13 @@ current settings are still returned immediately.
 
 #### `uuPersonPlus4uOidcToken`
 
-
 | Field       | Default      | Description                                                                                                         |
 | ----------- | ------------ | ------------------------------------------------------------------------------------------------------------------- |
 | Mode        | `Production` | `Production` uses `uuidentity.plus4u.net`. `Development` uses `uuidentity-dev.plus4u.net`.                          |
 | Disabled    | `false`      | Toggle to return a no-op message; flip it off to force a fresh login.                                               |
 | Token scope | `openid`     | Scope to request. For uuApp API calls, include the target scope (e.g. `openid uu-oidc:unregistered-client:<awid>`). |
 
-
 #### `uuPersonCustomOidcToken`
-
 
 | Field                     | Default    | Description                                                                                                                                                                                                                                                                                                                                                      |
 | ------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -174,9 +128,7 @@ current settings are still returned immediately.
 | Client ID                 | (empty)    | OIDC `client_id`. Leave empty to send the public-client sentinel `00000000000000000000000000000000` — Plus4U `/oidc/auth` rejects requests without any `client_id`, and most uuOIDC servers accept the sentinel for the PKCE flow. Fill in only if your OIDC server requires a registered client_id. **No `client_secret` is ever sent** — PKCE is used instead. |
 | Validate TLS certificates | `true`     | Disable only for trusted local development with self-signed certificates.                                                                                                                                                                                                                                                                                        |
 
-
 #### `uuEePlus4uOidcToken`
-
 
 | Field                                       | Default                                                | Description                                                                                                                                                                                           |
 | ------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -187,6 +139,39 @@ current settings are still returned immediately.
 | Load access codes from vault                | `true`                                                 | If ticked, the plugin reads credentials from the default v2 vault path (see [Platform paths](#platform-paths)) before prompting. Vault password is asked once per Insomnia session.                   |
 | Validate TLS certificates                   | `true`                                                 | Disable only for trusted local development with self-signed certificates.                                                                                                                             |
 
+### **Insomnia 13+ credentials via Insomnia variables.** 
+The uuEE tag is the only
+one that needs typed secrets. Insomnia v13 runs user-installed plugin tags in
+the main process, where `context.app.prompt` dialogs are not shown and OS
+environment variables are not visible (GUI apps do not inherit your shell). The
+tag therefore reads credentials from Insomnia's own variables, using these
+names:
+
+| Variable name                                                   | Purpose                                                                                                                                 |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `PLUS4U_OIDC_V2_VAULT_PASSWORD`                                 | Decrypt `~/.plus4u-oidc-v2/vault.data` when **Load access codes from vault** is ticked                                                  |
+| `PLUS4U_OIDC_V2_ACCESS_CODE_1` / `PLUS4U_OIDC_V2_ACCESS_CODE_2` | Access codes when the file vault is off or has no matching entry                                                                        |
+| `PLUS4U_OIDC_V2_<IDENT>_AC1` / `_AC2`                           | Per-identification override (`<IDENT>` = identification with non-alphanumeric characters removed, uppercased; e.g. `6-804-1` → `68041`) |
+
+**Recommended — Insomnia Secret variable (encrypted at rest):**
+
+1. `Preferences → General → Security` → **Generate Vault Key**.
+2. In the same Security section, tick **Enable vault in scripts**.
+3. Create a **private global sub-environment** (Environments → Base Environment
+  → `+`), then add the variable above (e.g. `PLUS4U_OIDC_V2_VAULT_PASSWORD`)
+   with type **Secret**.
+4. Select that global sub-environment in your collection, then **send** the
+  request (secrets are only decrypted on send, not in live preview).
+
+See [Insomnia → Secret environment variables](https://developer.konghq.com/insomnia/environments/#secret-environment-variables).
+
+**Last resort — plain Insomnia environment variable:** add the same-named
+variable as a normal (non-secret) value in your base/collection environment.
+This is stored in plaintext, so prefer the Secret variable above.
+
+Resolution order per value: Insomnia Secret (`vault.`*) → prompt (pre-v13
+only) → plain Insomnia environment variable. PKCE tags (`uuPerson`*) are
+unaffected.
 
 ---
 
@@ -194,42 +179,7 @@ current settings are still returned immediately.
 
 If you used the old plugin, you already have a vault file at the default legacy path for your OS (see [Platform paths](#platform-paths)). The migration tool re-encrypts it into the new format **without modifying the original**, so you can roll back if needed.
 
-```bash
-oidc-plus4u-vault-v2 migrate-legacy-vault
-```
-
-(See [Install the CLI globally for vault management](#install-the-cli-globally-for-vault-management) if the command is not found — install the CLI from npm first. The long name `insomnia-plugin-plus4u-oidc-v2` is registered as an alias and accepts the same arguments.)
-
-You'll be prompted for:
-
-1. Your **legacy** vault password.
-2. A **new** vault password (must be ≥ 12 characters, prompted twice).
-
-The new vault is written to the default v2 path for your OS with `0600` permissions. The legacy file is left in place; once you have verified the new plugin works, remove it:
-
-**macOS / Linux (bash):**
-
-```bash
-rm ~/.oidc-plus4u-vault/vault.data
-```
-
-**Windows (PowerShell):**
-
-```powershell
-Remove-Item -LiteralPath (Join-Path $env:USERPROFILE '.oidc-plus4u-vault\vault.data')
-```
-
-Useful flags:
-
-
-| Flag            | Use case                                                       |
-| --------------- | -------------------------------------------------------------- |
-| `--from <path>` | Migrate a non-default legacy file (e.g., a shared team vault). |
-| `--to <path>`   | Write the new vault somewhere other than the default v2 path.  |
-| `--force`       | Overwrite an existing destination vault (review carefully).    |
-
-
-For fleet-wide rollouts, see `MIGRATION.md`.
+For more information, see [`MIGRATION.md`](MIGRATION.md).
 
 ---
 
@@ -270,12 +220,10 @@ The first `vault add` against a non-existent vault file will prompt for a new va
 
 The vault is also populated automatically by `uuEePlus4uOidcToken` — which prompts you for new access codes on first sight of a new identification, caches them in session memory, and re-uses them across requests with the same label — and by the `migrate-legacy-vault` tool.
 
-
 | File / directory (default)         | Mode   | Contents                                                    |
 | ---------------------------------- | ------ | ----------------------------------------------------------- |
 | `~/.plus4u-oidc-v2/` (macOS/Linux) | `0700` | Vault directory. Windows: `%USERPROFILE%\.plus4u-oidc-v2\`. |
 | `vault.data` inside that directory | `0600` | AES-256-GCM encrypted vault (see `VAULT_FORMAT.md`).        |
-
 
 **Backups.** The vault file is self-contained — copying it to a USB stick or encrypted backup is enough. The encryption is bound to your chosen password, so as long as the password is strong (≥ 12 random characters), the file is safe at rest. Do **not** share the file via unencrypted channels (email, public chat).
 
@@ -316,13 +264,13 @@ The plugin **never sends a** `client_secret`. If your OIDC server rejects PKCE-o
 ## Token caching & refresh
 
 - Successful tokens are verified against the OIDC issuer's JWKS (signature check)
-  before caching. JWKS documents are cached in memory for 24 hours.
+before caching. JWKS documents are cached in memory for 24 hours.
 - Verified tokens are cached in process memory until **5 minutes before the**
-  `id_token` **exp claim**. Subsequent renders return the cached token with zero
-  network traffic.
+`id_token` **exp claim**. Subsequent renders return the cached token with zero
+network traffic.
 - A failed login is cached for **5 minutes** so a 100-request batch doesn't open 100 browser tabs. The cached error is returned as `-- plus4u-oidc-v2 token-error-cached: <message> (cached <timestamp>; toggle Disabled to refresh) --`.
 - To force a refresh: open the tag configuration, tick **Disabled**, close it, then untick **Disabled**. The next render starts a fresh
-  flow.
+flow.
 - All caches are in-memory only. Restarting Insomnia clears them.
 
 ---
@@ -342,26 +290,24 @@ We do **not** protect against:
 - A compromised Insomnia process or OS user account (the vault password and tokens live in process memory after first use).
 - An OIDC operator that issues tokens to the wrong user.
 
-Full details: `THREAT_MODEL.md`. File format spec: `VAULT_FORMAT.md`.
+Full details: [THREAD_MODEL.md](THREAT_MODEL.md). File format spec: [VAULT_FORMAT.md](VAULT_FORMAT.md).
 
 ---
 
 ## Troubleshooting
 
-
-| Symptom                                                                                                  | Likely cause                                                                                                                                                                                          | Fix                                                                                                                                                                                                                                                                                                                                                                                            |
-| -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `unknown block tag: uuPersonPlus4uOidcToken` (also for `uuPersonCustomOidcToken`, `uuEePlus4uOidcToken`) | Insomnia 11+ has `Allow elevated access for plugins` disabled, so external template tags never reach the templating Web Worker (Kong/insomnia [#8917](https://github.com/Kong/insomnia/issues/8917)). | Toggle `Preferences → Plugins → Allow elevated access for plugins` ON, fully quit and relaunch Insomnia. See [Prerequisite](#prerequisite-enable-allow-elevated-access-for-plugins). Check `renderer.log` under Insomnia's log folder (`~/Library/Logs/Insomnia/` on macOS, `~/.config/Insomnia/logs/` on Linux, `%APPDATA%\Insomnia\logs\` on Windows) for `[plugin] Loading plus4u-oidc-v2`. |
-| `-- plus4u-oidc-v2 token-error-cached: … --`                                                             | A previous login failed and the error is cached for 5 min.                                                                                                                                            | Toggle the **Disabled** switch on/off to refresh, or wait 5 min.                                                                                                                                                                                                                                                                                                                               |
-| `-- plus4u-oidc-v2 token-error: Vault decryption failed: wrong password or … tampered … --`              | Vault password typed wrong, OR another process modified the file.                                                                                                                                     | Restart Insomnia and re-enter the password. If still failing, restore from backup.                                                                                                                                                                                                                                                                                                             |
-| `-- plus4u-oidc-v2 missing-config: OIDC Server is required. --`                                          | Custom OIDC tag is using the placeholder `--fill-in--` server URL.                                                                                                                                    | Fill in the OIDC Server field with a real base URL.                                                                                                                                                                                                                                                                                                                                            |
-| `Authentication timed out after 300s.`                                                                   | You closed the browser before finishing login, or the OIDC server never redirected.                                                                                                                   | Re-trigger the request; complete the login within 5 minutes.                                                                                                                                                                                                                                                                                                                                   |
-| `OIDC server returned error 'access_denied'`                                                             | The user cancelled the login.                                                                                                                                                                         | Re-trigger the request and complete the login.                                                                                                                                                                                                                                                                                                                                                 |
-| `Callback` state `did not match …`                                                                       | A stale browser tab (or a malicious page) sent a callback. Safe to ignore.                                                                                                                            | Close stale OIDC tabs in the browser, re-trigger the request.                                                                                                                                                                                                                                                                                                                                  |
-| Browser does not open                                                                                    | `xdg-open` / system default browser not configured (mostly Linux / headless).                                                                                                                         | Manually open the URL printed in Insomnia's `Help → Show Log Folder` log.                                                                                                                                                                                                                                                                                                                      |
-| `EADDRINUSE` on listening                                                                                | Vanishingly rare; race against another process grabbing the same random port.                                                                                                                         | Re-trigger the request.                                                                                                                                                                                                                                                                                                                                                                        |
-
-
+| Symptom                                                                                                  | Likely cause                                                                                                                                                                                                                                                      | Fix                                                                                                                                                                                                                                                                                   |
+| -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `unknown block tag: uuPersonPlus4uOidcToken` (also for `uuPersonCustomOidcToken`, `uuEePlus4uOidcToken`) | Insomnia 11–12: `Allow elevated access for plugins` disabled (Kong/insomnia [#8917](https://github.com/Kong/insomnia/issues/8917)). Insomnia 13+ routes plugins via IPC regardless of that toggle — if tags still fail to load, reinstall the plugin and restart. | Insomnia 11–12: toggle `Preferences → Plugins → Allow elevated access for plugins` ON, fully quit and relaunch. See [Prerequisite](#prerequisite-enable-allow-elevated-access-for-plugins) Insomnia 13+: reinstall plugin, restart, check logs for `[plugin] Loading plus4u-oidc-v2`. |
+| `-- plus4u-oidc-v2 vault-locked` / `missing-config` with a `(diag: …)` suffix (uuEE)                     | Insomnia v13 cannot show plugin credential dialogs and does not see OS environment variables.                                                                                                                                                                     | Store credentials in an Insomnia **Secret** variable (`vault.`*) or a plain Insomnia environment variable of the same name, then **send** the request. See [uuEePlus4uOidcToken](#uueeplus4uoidctoken). The `(diag: …)` suffix shows which variable names were found.                 |
+| `-- plus4u-oidc-v2 token-error-cached: … --`                                                             | A previous login failed and the error is cached for 5 min.                                                                                                                                                                                                        | Toggle the **Disabled** switch on/off to refresh, or wait 5 min.                                                                                                                                                                                                                      |
+| `-- plus4u-oidc-v2 token-error: Vault decryption failed: wrong password or … tampered … --`              | Vault password typed wrong, OR another process modified the file.                                                                                                                                                                                                 | Restart Insomnia and re-enter the password. If still failing, restore from backup.                                                                                                                                                                                                    |
+| `-- plus4u-oidc-v2 missing-config: OIDC Server is required. --`                                          | Custom OIDC tag is using the placeholder `--fill-in--` server URL.                                                                                                                                                                                                | Fill in the OIDC Server field with a real base URL.                                                                                                                                                                                                                                   |
+| `Authentication timed out after 300s.`                                                                   | You closed the browser before finishing login, or the OIDC server never redirected.                                                                                                                                                                               | Re-trigger the request; complete the login within 5 minutes.                                                                                                                                                                                                                          |
+| `OIDC server returned error 'access_denied'`                                                             | The user cancelled the login.                                                                                                                                                                                                                                     | Re-trigger the request and complete the login.                                                                                                                                                                                                                                        |
+| `Callback` state `did not match …`                                                                       | A stale browser tab (or a malicious page) sent a callback. Safe to ignore.                                                                                                                                                                                        | Close stale OIDC tabs in the browser, re-trigger the request.                                                                                                                                                                                                                         |
+| Browser does not open                                                                                    | `xdg-open` / system default browser not configured (mostly Linux / headless).                                                                                                                                                                                     | Manually open the URL printed in Insomnia's `Help → Show Log Folder` log.                                                                                                                                                                                                             |
+| `EADDRINUSE` on listening                                                                                | Vanishingly rare; race against another process grabbing the same random port.                                                                                                                                                                                     | Re-trigger the request.                                                                                                                                                                                                                                                               |
 To see the full DevTools log inside Insomnia:
 `Help → Show Log Folder` (Insomnia 9+), or open DevTools with
 `Cmd+Option+I` on macOS / `Ctrl+Shift+I` on Windows and Linux.
@@ -394,7 +340,7 @@ A: No. The only network traffic is between the plugin, the OIDC server you confi
 
 1. `Application → Preferences → Plugins → insomnia-plugin-plus4u-oidc-v2 → Disable`, then **Uninstall**.
 2. Remove the vault file and its directory:
-   **macOS / Linux (bash):**
+  **macOS / Linux (bash):**
    **Windows (PowerShell):**
 3. If you used the bundled CLI globally, remove it:
   ```bash
@@ -406,7 +352,7 @@ A: No. The only network traffic is between the plugin, the OIDC server you confi
 
 ## Changelog
 
-See `[CHANGELOG.md](CHANGELOG.md)`.
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
